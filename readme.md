@@ -6,3 +6,9 @@
 
 ## Результат
 
+```cmd
+"C:\Users\_username_\AppData\Local\bin\NASM\nasm.exe" -f bin -o calc.com calc.asm        
+```
+
+![](.img/2024-06-16_15h21_11.png)
+![](.img/2024-06-16_15h22_36.png)
