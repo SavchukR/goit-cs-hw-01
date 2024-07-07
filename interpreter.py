@@ -10,6 +10,10 @@ class TokenType:
     INTEGER = "INTEGER"
     PLUS = "PLUS"
     MINUS = "MINUS"
+    MUL = "MUL"
+    DIV = "DIV"
+    LPAREN = "LPAREN"
+    RPAREN = "RPAREN"
     EOF = "EOF"  # Означає кінець вхідного рядка
 
 
@@ -67,6 +71,22 @@ class Lexer:
                 self.advance()
                 return Token(TokenType.MINUS, "-")
 
+            if self.current_char == "*":
+                self.advance()
+                return Token(TokenType.MUL, "*")
+            
+            if self.current_char == "/":
+                self.advance()
+                return Token(TokenType.DIV, "/")
+            
+            if self.current_char == "(":
+                self.advance()
+                return Token(TokenType.LPAREN, "(")
+            
+            if self.current_char == ")":
+                self.advance()
+                return Token(TokenType.RPAREN, ")")
+            
             raise LexicalError("Помилка лексичного аналізу")
 
         return Token(TokenType.EOF, None)
@@ -106,12 +126,38 @@ class Parser:
             self.current_token = self.lexer.get_next_token()
         else:
             self.error()
+            
+    def factor(self):
+        
+        current_token = self.current_token
+        
+        if self.current_token.type == TokenType.INTEGER:
+            self.eat(TokenType.INTEGER)
+            return Num(current_token)
+        
+        if self.current_token.type == TokenType.LPAREN:
+            self.eat(TokenType.LPAREN)
+            current_expression = self.expr()
+            self.eat(TokenType.RPAREN)
+            return current_expression
+        
+        else:
+            self.error()
 
     def term(self):
-        """Парсер для 'term' правил граматики. У нашому випадку - це цілі числа."""
-        token = self.current_token
-        self.eat(TokenType.INTEGER)
-        return Num(token)
+        node = self.factor()
+        
+        while self.current_token.type in (TokenType.DIV, TokenType.MUL):
+            token = self.current_token
+            if token.type == TokenType.MUL:
+                self.eat(TokenType.MUL)
+            elif token.type == TokenType.DIV:
+                self.eat(TokenType.DIV)
+
+            node = BinOp(left=node, op=token, right=self.factor())
+
+        return node
+
 
     def expr(self):
         """Парсер для арифметичних виразів."""
@@ -143,7 +189,6 @@ def print_ast(node, level=0):
     else:
         print(f"{indent}Unknown node type: {type(node)}")
 
-
 class Interpreter:
     def __init__(self, parser):
         self.parser = parser
@@ -153,7 +198,13 @@ class Interpreter:
             return self.visit(node.left) + self.visit(node.right)
         elif node.op.type == TokenType.MINUS:
             return self.visit(node.left) - self.visit(node.right)
-
+        elif node.op.type == TokenType.MUL:
+            return self.visit(node.left) * self.visit(node.right)
+        elif node.op.type == TokenType.DIV:
+            try:
+                return self.visit(node.left) / self.visit(node.right)
+            except ZeroDivisionError:
+                raise Exception("0 division")
     def visit_Num(self, node):
         return node.value
 
